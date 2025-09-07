@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ATS Checker</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      .card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        width: 600px;
+        max-width: 95%;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 16px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        margin-bottom: 12px;
+        resize: vertical;
+      }
+      button {
+        background: #4f46e5;
+        color: white;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      pre {
+        background: #f0f0f0;
+        padding: 10px;
+        border-radius: 6px;
+        max-height: 200px;
+        overflow: auto;
+      }
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      const { useState } = React;
+
+      const WEBHOOK_URL =
+        "https://n8n.srv976264.hstgr.cloud/webhook/ats-checker";
+
+      function App() {
+        const [resume, setResume] = useState("");
+        const [jd, setJd] = useState("");
+        const [loading, setLoading] = useState(false);
+        const [result, setResult] = useState(null);
+        const [error, setError] = useState(null);
+
+        const onSubmit = async (e) => {
+          e.preventDefault();
+          setError(null);
+          setResult(null);
+
+          if (!resume.trim() || !jd.trim()) {
+            setError("Please enter both Resume and Job Description.");
+            return;
+          }
+
+          setLoading(true);
+          try {
+            const resp = await fetch(WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ resume, jd }),
+            });
+
+            const json = await resp.json();
+            setResult(json);
+          } catch (err) {
+            setError("Failed to fetch result");
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        return (
+          <div className="card">
+            <h1>ATS Checker</h1>
+            <form onSubmit={onSubmit}>
+              <textarea
+                value={resume}
+                onChange={(e) => setResume(e.target.value)}
+                placeholder="Paste resume text here..."
+              />
+              <textarea
+                value={jd}
+                onChange={(e) => setJd(e.target.value)}
+                placeholder="Paste job description here..."
+              />
+              <button type="submit" disabled={loading}>
+                {loading ? "Checking..." : "Check ATS Score"}
+              </button>
+            </form>
+            {error && <div className="error">{error}</div>}
+            {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
