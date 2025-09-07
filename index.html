@@ -1,139 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ATS Checker</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f4f4f9;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-      }
-      .card {
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        width: 600px;
-        max-width: 95%;
-      }
-      h1 {
-        font-size: 22px;
-        margin-bottom: 16px;
-      }
-      textarea {
-        width: 100%;
-        min-height: 140px;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        margin-bottom: 12px;
-        resize: vertical;
-      }
-      button {
-        background: #4f46e5;
-        color: white;
-        padding: 10px 16px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      button[disabled] {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      pre {
-        background: #f0f0f0;
-        padding: 10px;
-        border-radius: 6px;
-        max-height: 200px;
-        overflow: auto;
-      }
-      .error {
-        color: red;
-        margin-top: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ATS Checker</title>
+  <style>
+    /* General Reset */
+    body, html {margin:0;padding:0;font-family: Arial,sans-serif;background:#f4f4f9;}
+    
+    /* Navbar */
+    nav {width:100%;background:#4f46e5;color:white;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+    nav h2 {margin:0;font-size:20px;}
+    nav ul {list-style:none;display:flex;gap:16px;margin:0;padding:0;}
+    nav ul li {cursor:pointer;}
+    nav ul li:hover {text-decoration:underline;}
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    /* Container */
+    .container {max-width:700px;margin:40px auto;padding:24px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.1);}
+    h1 {text-align:center;font-size:24px;margin-bottom:24px;}
 
-    <script type="text/babel">
-      const { useState } = React;
+    /* Form */
+    form {display:flex;flex-direction:column;gap:16px;}
+    input[type=file], textarea {padding:12px;border:1px solid #ccc;border-radius:8px;}
+    textarea {resize:vertical;min-height:120px;}
+    button {padding:12px;background:#4f46e5;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:0.2s;}
+    button:hover {background:#3730a3;}
 
-      const WEBHOOK_URL =
-        "https://n8n.srv976264.hstgr.cloud/webhook/ats-checker";
+    /* Result Box */
+    .result {margin-top:24px;padding:16px;background:#f0f0f0;border-radius:8px;font-size:16px;text-align:center;}
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav>
+    <h2>ATS Checker</h2>
+    <ul>
+      <li>Home</li>
+      <li>Features</li>
+      <li>About</li>
+      <li>Contact</li>
+    </ul>
+  </nav>
 
-      function App() {
-        const [resume, setResume] = useState("");
-        const [jd, setJd] = useState("");
-        const [loading, setLoading] = useState(false);
-        const [result, setResult] = useState(null);
-        const [error, setError] = useState(null);
+  <!-- Main Container -->
+  <div class="container" id="root"></div>
 
-        const onSubmit = async (e) => {
-          e.preventDefault();
-          setError(null);
-          setResult(null);
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-          if (!resume.trim() || !jd.trim()) {
-            setError("Please enter both Resume and Job Description.");
-            return;
-          }
+  <script type="text/babel">
+    const { useState } = React;
 
+    const WEBHOOK_URL = "https://n8n.srv976264.hstgr.cloud/webhook/ats-checker";
+
+    function App(){
+      const [resumeFile, setResumeFile] = useState(null);
+      const [jd, setJd] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setResult(null);
+
+        if(!resumeFile || !jd.trim()){
+          setError('Please upload a resume and enter the Job Description.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const resumeText = reader.result;
           setLoading(true);
-          try {
+          try{
             const resp = await fetch(WEBHOOK_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ resume, jd }),
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({resume: resumeText, jd})
             });
-
             const json = await resp.json();
             setResult(json);
-          } catch (err) {
-            setError("Failed to fetch result");
-          } finally {
+          }catch(err){
+            setError('Failed to fetch result.');
+          }finally{
             setLoading(false);
           }
         };
+        reader.readAsText(resumeFile);
+      };
 
-        return (
-          <div className="card">
-            <h1>ATS Checker</h1>
-            <form onSubmit={onSubmit}>
-              <textarea
-                value={resume}
-                onChange={(e) => setResume(e.target.value)}
-                placeholder="Paste resume text here..."
-              />
-              <textarea
-                value={jd}
-                onChange={(e) => setJd(e.target.value)}
-                placeholder="Paste job description here..."
-              />
-              <button type="submit" disabled={loading}>
-                {loading ? "Checking..." : "Check ATS Score"}
-              </button>
-            </form>
-            {error && <div className="error">{error}</div>}
-            {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
-          </div>
-        );
-      }
+      return (
+        <div>
+          <h1>Check Your Resume ATS Score</h1>
+          <form onSubmit={handleSubmit}>
+            <input type="file" accept=".pdf,.txt" onChange={e=>setResumeFile(e.target.files[0])} />
+            <textarea value={jd} onChange={e=>setJd(e.target.value)} placeholder="Paste Job Description here..."></textarea>
+            <button type="submit" disabled={loading}>{loading ? 'Checking...' : 'Check Score'}</button>
+          </form>
+          {error && <div className="result" style={{color:'red'}}>{error}</div>}
+          {result && <div className="result">ATS Score: {result.score}/100</div>}
+        </div>
+      );
+    }
 
-      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-    </script>
-  </body>
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
 </html>
